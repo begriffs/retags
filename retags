@@ -1,0 +1,28 @@
+#!/bin/sh
+
+find_params="\"$(pwd -P)\" -type f -name '*.[chyl]' ! -name '.*' ! -name '*.lex.c' ! -name '*.tab.c'"
+
+relevant_files()
+{
+	eval find $find_params -print
+}
+
+rebuild_all()
+{
+	echo "rebuild all"
+	rm -f tags
+	eval find $find_params -exec ctags -aw {} +
+}
+
+# create tags from scratch
+rebuild_all
+
+trap rebuild_all USR1
+trap exit TERM INT
+
+# maintain them incrementally
+while true
+do
+	relevant_files | entr -dp retags_delta /_ &
+	wait
+done
