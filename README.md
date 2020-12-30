@@ -12,12 +12,9 @@ dependency: [entr](http://eradman.com/entrproject/).
 retags
 ```
 
-The program updates `tags` whenever a .c, .h, .l, or .y file is changed or
-added. Single file updates are fast, requiring few system resources.
-
-If a source file is deleted, or more than one file is changed simultaneously,
-you'll need to regenerate the tags file. Either restart the retags program, or
-send it a SIGUSR1 signal to do this.
+The program updates `tags` whenever a .c, .h, .l, or .y file is changed, added,
+or deleted. Retags works even when multiple files are changed simultaneously,
+such a git checkout operation.
 
 ### Installation
 

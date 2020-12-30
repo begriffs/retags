@@ -1,28 +1,51 @@
 #!/bin/sh
 
-find_params="\"$(pwd -P)\" -type f -name '*.[chyl]' ! -name '.*' ! -name '*.lex.c' ! -name '*.tab.c'"
-
-relevant_files()
-{
-	eval find $find_params -print
-}
+find_params="\"$(pwd -P)\" -type f -name '*.[chyl]' ! -name '.*' ! -name '*.lex.[ch]' ! -name '*.tab.[ch]'"
 
 rebuild_all()
 {
-	echo "rebuild all"
+	printf "rebuild all..."
 	rm -f tags
 	eval find $find_params -exec ctags -aw {} +
+	echo "done"
 }
+
+relevant_files()
+{
+	eval find $find_params -print | sort
+}
+
+relevant_files_since()
+{
+	eval find $find_params -newer "$1" -print | sort
+}
+
+old_files=/tmp/retags."$$"."$(awk 'BEGIN {srand();printf "%d\n", rand() * 10^10}')"
+new_files=/tmp/retags."$$"."$(awk 'BEGIN {        printf "%d\n", rand() * 10^10}')"
+cleanup()
+{
+	rm -f "$old_files" "$new_files"
+	exit
+}
+trap cleanup TERM INT
 
 # create tags from scratch
 rebuild_all
 
-trap rebuild_all USR1
-trap exit TERM INT
-
+relevant_files > "$new_files"
 # maintain them incrementally
 while true
 do
-	relevant_files | entr -dp retags_delta /_ &
-	wait
+	cp "$new_files" "$old_files"
+
+	# entr will kill itself when files are changed/added
+	entr -dps 'kill $PPID' < "$old_files" &
+	wait # allow SIGINT through
+
+	# modified files
+	relevant_files_since "$old_files" | xargs -L 1 retags_delta
+
+	# deleted files
+	relevant_files > "$new_files"
+	comm -23 "$old_files" "$new_files" | xargs -L 1 retags_delta
 done
