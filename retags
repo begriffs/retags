@@ -2,7 +2,7 @@
 
 trap exit TERM INT
 
-find_params="\"$(pwd -P)\" -type f -name '*.[chyl]' ! -name '.*' ! -name '*.lex.[ch]' ! -name '*.tab.[ch]'"
+find_params=". -type f -name '*.[chyl]' ! -name '.*' ! -name '*.lex.[ch]' ! -name '*.tab.[ch]'"
 
 rebuild_all()
 {
