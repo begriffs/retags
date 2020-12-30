@@ -4,7 +4,7 @@ find_params="\"$(pwd -P)\" -type f -name '*.[chyl]' ! -name '.*' ! -name '*.lex.
 
 rebuild_all()
 {
-	printf "rebuild all..."
+	printf "rebuilding all tags..."
 	rm -f tags
 	eval find $find_params -exec ctags -aw {} +
 	echo "done"
@@ -13,11 +13,6 @@ rebuild_all()
 relevant_files()
 {
 	eval find $find_params -print | sort
-}
-
-relevant_files_since()
-{
-	eval find $find_params -newer "$1" -print | sort
 }
 
 old_files=/tmp/retags."$$"."$(awk 'BEGIN {srand();printf "%d\n", rand() * 10^10}')"
@@ -32,8 +27,8 @@ trap cleanup TERM INT
 # create tags from scratch
 rebuild_all
 
-relevant_files > "$new_files"
 # maintain them incrementally
+relevant_files > "$new_files"
 while true
 do
 	cp "$new_files" "$old_files"
@@ -42,10 +37,16 @@ do
 	entr -dps 'kill $PPID' < "$old_files" &
 	wait # allow SIGINT through
 
-	# modified files
-	relevant_files_since "$old_files" | xargs -L 1 retags_delta
-
-	# deleted files
+	# remove entries for deleted files
+	# (ctags claims it does this, but the macos one doesn't)
 	relevant_files > "$new_files"
-	comm -23 "$old_files" "$new_files" | xargs -L 1 retags_delta
+	printf "cleaning tags..."
+	comm -23 "$old_files" "$new_files" | \
+		xargs -I {} -L 1 ex -s -c ":g%{}%d" -c ":x" tags
+	echo "done"
+	
+	# rebuild tags
+	printf "updating tags..."
+	xargs ctags -wu < "$new_files"
+	echo "done"
 done
